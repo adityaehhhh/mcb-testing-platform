@@ -25,8 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   const hasFaults = telemetry && Object.values(telemetry.sensorHealth).some((v) => v === 'FAULT');
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'live-test', label: 'Live Test' },
+    { id: 'dashboard', label: 'Test Workspace' },
     { id: 'mcb-samples', label: 'MCB Samples' },
     { id: 'test-batches', label: 'Test Batches' },
     { id: 'reports', label: 'Reports' },
@@ -41,15 +40,15 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Left: Brand Identity */}
         <div className="flex items-center gap-space-lg flex-shrink-0">
           <div className="flex items-center gap-space-md cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm shadow-sm">
-              <span className="material-symbols-outlined text-on-primary-container">bolt</span>
+            <div className="w-10 h-10 rounded-lg bg-primary text-on-primary flex items-center justify-center font-headline-sm text-headline-sm shadow-sm">
+              <span className="material-symbols-outlined">bolt</span>
             </div>
             <div>
               <div className="flex items-center gap-space-sm">
-                <span className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-tight">MCB TESTING SYSTEM</span>
-                <span className="px-space-sm py-0.5 rounded-DEFAULT bg-surface-container-high text-on-secondary-container font-label-caps text-label-caps">IS/IEC 60898-1</span>
+                <span className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-tight font-bold">OPTITRIP SYSTEMS</span>
+                <span className="px-space-sm py-0.5 rounded-DEFAULT bg-surface-container-high text-primary font-label-caps text-label-caps font-semibold">IS/IEC 60898-1</span>
               </div>
-              <p className="font-body-sm text-body-sm text-on-surface-variant">Automated Testing &amp; Compliance Platform</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">Automated MCB Testing &amp; Compliance Platform</p>
             </div>
           </div>
         </div>

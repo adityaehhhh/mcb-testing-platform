@@ -299,20 +299,20 @@ class SimulatedMachineTransport extends MachineTransport {
 
   computeTargetTripTime(curve, multiplier, scenario) {
     if (scenario === 'MCB_FAIL_TO_TRIP') {
-      return 3500; // Stuck mechanism, exceeds limits
+      return 4500; // Stuck mechanism, exceeds limits
     }
     if (scenario === 'CONTACTOR_FAILURE') {
       return 1000;
     }
-    // Standard realistic physical trip times:
-    // Magnetic trip (fast): 15ms - 45ms for B (3-5In), C (5-10In), D (10-20In)
+    // Realistic trip times (calibrated to test window):
+    // Magnetic trip (fast): 25ms - 60ms
     if (multiplier >= 5.0) {
-      return +(18 + Math.random() * 18).toFixed(1); // 18ms - 36ms
+      return +(22 + Math.random() * 20).toFixed(1); // 22ms - 42ms
     } else if (multiplier >= 3.0) {
-      return +(28 + Math.random() * 25).toFixed(1); // 28ms - 53ms
+      return +(35 + Math.random() * 25).toFixed(1); // 35ms - 60ms
     } else {
-      // Overload thermal curve (scaled to 6000ms demo window for fast interactive testing)
-      return +(4200 + Math.random() * 800).toFixed(1);
+      // Overload thermal curve (scaled for interactive test window)
+      return +(3500 + Math.random() * 1000).toFixed(1);
     }
   }
 
@@ -330,7 +330,8 @@ class SimulatedMachineTransport extends MachineTransport {
       this.contactorState = 'OPEN';
       this.relayState = 'READY';
       this.mcbState = 'READY';
-      this.current = 0.02;
+      this.current = +(0.02 + 0.02 * Math.random()).toFixed(2);
+      this.voltage = +(230.0 + 0.3 * Math.sin(this.time)).toFixed(2);
     }
     // 300 - 600ms: CONTACTOR_INITIALIZATION
     else if (t.elapsedMs < 600) {
@@ -353,7 +354,7 @@ class SimulatedMachineTransport extends MachineTransport {
       this.loadState = 'ACTIVE';
       this.mcbState = 'ON';
     }
-    // 800ms: CURRENT_APPLICATION & LIVE_MEASUREMENT
+    // 800ms+: CURRENT_APPLICATION & LIVE_MEASUREMENT
     else if (t.elapsedMs >= 800 && !this.tripDetected) {
       if (!this.currentAppliedTime) {
         this.currentAppliedTime = now;
@@ -367,18 +368,21 @@ class SimulatedMachineTransport extends MachineTransport {
       // Check Fault Scenarios
       if (t.scenario === 'CURRENT_SENSOR_FAULT' && t.elapsedMs > 1200) {
         this.sensorHealth.current = 'FAULT';
+        this.current = -999.9;
         this.injectFault('F004', 'CURRENT_SENSOR_FAULT', 'Hall-Effect CT Sensor', 'CRITICAL', 'Current sensor signal out of range / ADC rail sat.');
         this.abortTest('Current sensor fault (F004)');
         return;
       }
       if (t.scenario === 'VOLTAGE_SENSOR_FAULT' && t.elapsedMs > 1100) {
         this.sensorHealth.voltage = 'FAULT';
+        this.voltage = 0.0;
         this.injectFault('F005', 'VOLTAGE_SENSOR_FAULT', 'Voltage Sensing Module', 'CRITICAL', 'Zero-cross detection lost on L1.');
         this.abortTest('Voltage sensor fault (F005)');
         return;
       }
       if (t.scenario === 'TEMPERATURE_SENSOR_FAULT' && t.elapsedMs > 1300) {
         this.sensorHealth.temperature = 'FAULT';
+        this.mcbTemp = -40.0;
         this.injectFault('F003', 'TEMPERATURE_SENSOR_FAULT', 'PT100 RTD Sensor', 'WARNING', 'RTD resistance discontinuity.');
       }
       if (t.scenario === 'EMERGENCY_STOP' && t.elapsedMs > 1200) {
@@ -388,50 +392,54 @@ class SimulatedMachineTransport extends MachineTransport {
         return;
       }
 
-      // Physics: Current ramps up to target and fluctuates with AC load resistance
-      const currentProgress = Math.min(1.0, (t.elapsedMs - 800) / 40); // 40ms rise time
-      const testCurr = t.targetCurrent * currentProgress * (1 + 0.03 * Math.sin(this.time * 20));
+      // Physics: Current ramps up to target with AC ripple
+      const currentProgress = Math.min(1.0, (t.elapsedMs - 800) / 60); // 60ms rise time
+      const testCurr = t.targetCurrent * currentProgress * (1 + 0.02 * Math.sin(this.time * 20));
       this.current = +testCurr.toFixed(2);
 
       // Voltage dips slightly under heavy load: V = V0 - I * R_source
-      this.voltage = +(230.0 - this.current * 0.032 + 0.5 * Math.sin(this.time * 10)).toFixed(2);
+      this.voltage = +(230.0 - this.current * 0.028 + 0.4 * Math.sin(this.time * 10)).toFixed(2);
 
-      // Thermal accumulation
-      const heatingRate = 0.0004 * (this.current * this.current * 0.015);
+      // Thermal accumulation (Joule heating)
+      const heatingRate = 0.0003 * (this.current * this.current * 0.012);
       this.mcbTemp = +(this.mcbTemp + heatingRate).toFixed(1);
-      this.loadTemp = +(this.loadTemp + heatingRate * 2.2).toFixed(1);
+      this.loadTemp = +(this.loadTemp + heatingRate * 1.8).toFixed(1);
       this.maxTemp = Math.max(this.maxTemp, this.mcbTemp);
 
       // Joule Integral accumulation: dI2t = I^2 * dt
       const dtSec = this.tickIntervalMs / 1000;
       this.cumulativeI2t += (this.current * this.current) * dtSec;
 
-      // Check if trip time reached
-      const activeTestDuration = now - this.currentAppliedTime;
-      if (activeTestDuration >= t.plannedTripMs) {
+      // Check if trip duration reached (scaled for realistic UI visibility: instantaneous trips trigger after ~400-800ms of stimulus)
+      const stimulusDuration = now - this.currentAppliedTime;
+      const effectiveTripWindow = t.scenario === 'MCB_FAIL_TO_TRIP' ? 4000 : (t.targetMultiplier >= 3.0 ? 600 : t.plannedTripMs);
+      
+      if (stimulusDuration >= effectiveTripWindow) {
         // MCB TRIP EVENT!
         this.tripDetected = true;
         this.tripTime = now;
-        this.calculatedTripTimeMs = +(activeTestDuration).toFixed(1);
+        this.calculatedTripTimeMs = t.scenario === 'MCB_FAIL_TO_TRIP' 
+          ? +(t.plannedTripMs).toFixed(1) 
+          : +(t.plannedTripMs).toFixed(1);
         this.mcbState = (t.scenario === 'MCB_FAIL_TO_TRIP') ? 'FAILED_TO_TRIP' : 'TRIPPED';
         this.currentStage = 'MCB TRIP DETECTED';
 
-        this.recordEvent(t.testId, t.elapsedMs, 'MCB_TRIP', `MCB trip mechanism activated. Trip time: ${this.calculatedTripTimeMs} ms`);
+        this.recordEvent(t.testId, t.elapsedMs, 'MCB_TRIP', `MCB trip mechanism activated. Measured trip time: ${this.calculatedTripTimeMs} ms`);
 
-        // Post-trip de-energization
+        // Post-trip de-energization: immediate current collapse
         this.contactorState = 'OPEN';
         this.relayState = 'READY';
         this.loadState = 'OFF';
-        this.current = 0.04; // drops instantly to zero instrument noise
+        this.current = +(0.03 + 0.02 * Math.random()).toFixed(2); // drops instantly to zero instrument noise
       }
     }
-    // Post-Trip Analysis & Compliance Stages (over next 1.5 seconds)
+    // Post-Trip Analysis & Compliance Stages
     else if (this.tripDetected && !t.isCompleted) {
       const postTripElapsed = now - this.tripTime;
 
       // Slow thermal cooling
-      this.mcbTemp = +(Math.max(this.ambientTemp, this.mcbTemp - 0.05)).toFixed(1);
-      this.loadTemp = +(Math.max(this.ambientTemp, this.loadTemp - 0.08)).toFixed(1);
+      this.mcbTemp = +(Math.max(this.ambientTemp, this.mcbTemp - 0.03)).toFixed(1);
+      this.loadTemp = +(Math.max(this.ambientTemp, this.loadTemp - 0.05)).toFixed(1);
 
       if (postTripElapsed < 300) {
         this.currentStage = 'DATA ANALYSIS & I²t INTEGRATION';
@@ -444,8 +452,8 @@ class SimulatedMachineTransport extends MachineTransport {
       }
     }
 
-    // Capture waveform buffers for playback and storage
-    if (this.waveformCurrent.length < 200) {
+    // Capture continuous waveform buffers for playback and storage
+    if (this.waveformCurrent.length < 300) {
       this.waveformCurrent.push(this.current);
       this.waveformVoltage.push(this.voltage);
       this.waveformTemp.push(this.mcbTemp);
@@ -484,11 +492,23 @@ class SimulatedMachineTransport extends MachineTransport {
       failureReason = `Trip time of ${this.calculatedTripTimeMs} ms exceeded IS/IEC 60898-1 upper boundary (${limitMaxMs} ms).`;
     }
 
-    const peak = +(t.targetCurrent * 1.04).toFixed(2);
-    const rmsCurr = +(t.targetCurrent * 0.99).toFixed(2);
-    const rmsVolt = 228.4;
+    // Calculate actual metrics from captured waveform samples
+    const peak = this.waveformCurrent.length > 0 
+      ? +Math.max(...this.waveformCurrent).toFixed(2) 
+      : +(t.targetCurrent * 1.02).toFixed(2);
+
+    const nonZeroCurrents = this.waveformCurrent.filter(c => c > 0.5);
+    const rmsCurr = nonZeroCurrents.length > 0
+      ? +(Math.sqrt(nonZeroCurrents.reduce((sum, c) => sum + c * c, 0) / nonZeroCurrents.length)).toFixed(2)
+      : +(t.targetCurrent * 0.99).toFixed(2);
+
+    const rmsVolt = this.waveformVoltage.length > 0
+      ? +(Math.sqrt(this.waveformVoltage.reduce((sum, v) => sum + v * v, 0) / this.waveformVoltage.length)).toFixed(1)
+      : 228.4;
+
     const iOverIn = +(rmsCurr / sample.rated_current_in).toFixed(2);
     const tempRise = +(this.maxTemp - this.initialTemp).toFixed(1);
+    const totalI2t = +this.cumulativeI2t.toFixed(2);
 
     // Update Test Batch in DB
     await runQuery(`
@@ -506,7 +526,7 @@ class SimulatedMachineTransport extends MachineTransport {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IS/IEC 60898-1', ?, ?, ?)
     `, [
       t.testId, verdict, this.calculatedTripTimeMs, peak, rmsCurr, rmsVolt,
-      iOverIn, +this.cumulativeI2t.toFixed(2), this.initialTemp, this.maxTemp, tempRise,
+      iOverIn, totalI2t, this.initialTemp, this.maxTemp, tempRise,
       limitMinMs, limitMaxMs, failureReason
     ]);
 
@@ -522,8 +542,9 @@ class SimulatedMachineTransport extends MachineTransport {
       JSON.stringify(this.waveformI2t)
     ]);
 
-    // Generate QR Code & Verification Record
-    const verifyUrl = `http://localhost:5173/verify/${t.testId}`;
+    // Generate QR Code & Verification Record with Dynamic Base URL
+    const baseUrl = process.env.APP_BASE_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'http://localhost:5000');
+    const verifyUrl = `${baseUrl}/verify/${t.testId}`;
     const signatureHash = crypto.createHash('sha256').update(`${t.testId}:${verdict}:${this.calculatedTripTimeMs}:${peak}:${this.dataSource}`).digest('hex');
     const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 256, margin: 1 });
 
@@ -545,7 +566,7 @@ class SimulatedMachineTransport extends MachineTransport {
       peak_current: peak,
       rms_current: rmsCurr,
       rms_voltage: rmsVolt,
-      i2t_value: +this.cumulativeI2t.toFixed(2),
+      i2t_value: totalI2t,
       i_over_in: iOverIn,
       temp_rise: tempRise,
       initial_temp: this.initialTemp,
@@ -571,12 +592,18 @@ class SimulatedMachineTransport extends MachineTransport {
       rmsCurrent: rmsCurr,
       rmsVoltage: rmsVolt,
       iOverIn,
-      i2t: +this.cumulativeI2t.toFixed(2),
+      i2t: totalI2t,
       tempRise,
       failureReason,
       reportSummary,
       qrDataUrl,
-      verifyUrl
+      verifyUrl,
+      waveform: {
+        current: this.waveformCurrent,
+        voltage: this.waveformVoltage,
+        temperature: this.waveformTemp,
+        i2t: this.waveformI2t
+      }
     };
 
     this.emit('test_completed', completedTestPayload);

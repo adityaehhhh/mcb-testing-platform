@@ -138,70 +138,89 @@ export const App: React.FC = () => {
     fetchReports();
   }, []);
 
-  // 2. WebSocket Real-time Telemetry & Events
+  // 2. WebSocket Real-time Telemetry & Events with Exponential Backoff
+  const reconnectAttemptsRef = useRef<number>(0);
+
   useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimeout: any = null;
+    let isUnmounted = false;
 
     const connectWS = () => {
+      if (isUnmounted) return;
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
       const wsUrl = `${protocol}//${host}/ws`;
 
-      ws = new WebSocket(wsUrl);
+      try {
+        ws = new WebSocket(wsUrl);
 
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === 'TELEMETRY') {
-            setTelemetry(msg.payload);
-            setStatus((prev) => ({
-              ...prev,
-              connected: true,
-              machineState: msg.payload.machineState,
-              currentStage: msg.payload.currentStage,
-              telemetry: msg.payload
-            }));
-          } else if (msg.type === 'STATE_CHANGE') {
-            fetchStatus();
-          } else if (msg.type === 'TEST_STARTED') {
-            setTestEvents([]);
-            fetchStatus();
-          } else if (msg.type === 'TEST_EVENT') {
-            setTestEvents((prev) => [...prev, msg.payload]);
-          } else if (msg.type === 'TEST_COMPLETED') {
-            fetchStatus();
-            fetchBatches();
-            fetchReports();
-            if (msg.payload) {
-              setLastCompletedTest(msg.payload);
+        ws.onopen = () => {
+          reconnectAttemptsRef.current = 0;
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'TELEMETRY') {
+              setTelemetry(msg.payload);
+              setStatus((prev) => ({
+                ...prev,
+                connected: true,
+                machineState: msg.payload.machineState,
+                currentStage: msg.payload.currentStage,
+                telemetry: msg.payload
+              }));
+            } else if (msg.type === 'STATE_CHANGE') {
+              fetchStatus();
+            } else if (msg.type === 'TEST_STARTED') {
+              setTestEvents([]);
+              fetchStatus();
+            } else if (msg.type === 'TEST_EVENT') {
+              setTestEvents((prev) => [...prev, msg.payload]);
+            } else if (msg.type === 'TEST_COMPLETED') {
+              fetchStatus();
+              fetchBatches();
+              fetchReports();
+              if (msg.payload) {
+                setLastCompletedTest(msg.payload);
+              }
+            } else if (msg.type === 'TEST_ABORTED') {
+              fetchStatus();
+              fetchBatches();
+            } else if (msg.type === 'MACHINE_CONNECTED' || msg.type === 'MACHINE_DISCONNECTED') {
+              fetchStatus();
+              if (msg.type === 'MACHINE_DISCONNECTED') {
+                setTelemetry(null);
+              }
             }
-          } else if (msg.type === 'TEST_ABORTED') {
-            fetchStatus();
-            fetchBatches();
-          } else if (msg.type === 'MACHINE_CONNECTED' || msg.type === 'MACHINE_DISCONNECTED') {
-            fetchStatus();
-            if (msg.type === 'MACHINE_DISCONNECTED') {
-              setTelemetry(null);
-            }
+          } catch (err) {
+            console.error('[WebSocket] parse error:', err);
           }
-        } catch (err) {
-          console.error('[WebSocket] parse error:', err);
+        };
+
+        ws.onclose = () => {
+          if (!isUnmounted) {
+            const delay = Math.min(1000 * Math.pow(1.5, reconnectAttemptsRef.current), 8000);
+            reconnectAttemptsRef.current += 1;
+            reconnectTimeout = setTimeout(connectWS, delay);
+          }
+        };
+
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch (e) {
+        if (!isUnmounted) {
+          reconnectTimeout = setTimeout(connectWS, 2000);
         }
-      };
-
-      ws.onclose = () => {
-        reconnectTimeout = setTimeout(connectWS, 2000);
-      };
-
-      ws.onerror = () => {
-        ws?.close();
-      };
+      }
     };
 
     connectWS();
 
     return () => {
+      isUnmounted = true;
       if (ws) ws.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
@@ -323,24 +342,8 @@ export const App: React.FC = () => {
             status={status}
             telemetry={telemetry}
             selectedSample={selectedSample}
-            targetMultiplier={targetMultiplier}
-            onStartTest={handleStartTest}
-            onNavigateToLiveTest={() => setActiveTab('live-test')}
-            onOpenReport={(id) => setReportModalTestId(id)}
-            onOpenQR={(id, vUrl, qUrl) => {
-              setQrModalData({ isOpen: true, testId: id, verifyUrl: vUrl, qrDataUrl: qUrl });
-            }}
-            onSelectBatch={(id) => setSelectedBatchId(id)}
-            onViewAllBatches={() => setActiveTab('test-batches')}
-            batches={batches}
-            lastCompletedTest={lastCompletedTest}
-            isLoading={isTestLoading}
-          />
-        ) : activeTab === 'live-test' ? (
-          <LiveTestWorkspace
-            status={status}
-            telemetry={telemetry}
-            selectedSample={selectedSample}
+            samples={samples}
+            onSelectSample={(sample) => setSelectedSample(sample)}
             targetMultiplier={targetMultiplier}
             setTargetMultiplier={setTargetMultiplier}
             scenario={scenario}
@@ -349,9 +352,19 @@ export const App: React.FC = () => {
             setTestType={setTestType}
             onStartTest={handleStartTest}
             onAbortTest={handleAbortTest}
+            onResetFaults={handleResetFaults}
+            onEmergencyStop={handleEmergencyStop}
+            onOpenReport={(id) => setReportModalTestId(id)}
+            onOpenQR={(id, vUrl, qUrl) => {
+              setQrModalData({ isOpen: true, testId: id, verifyUrl: vUrl, qrDataUrl: qUrl });
+            }}
+            onSelectBatch={(id) => setSelectedBatchId(id)}
+            onViewAllBatches={() => setActiveTab('test-batches')}
+            batches={batches}
             events={testEvents}
             lastCompletedTest={lastCompletedTest}
             isLoading={isTestLoading}
+            onAddNewSample={() => setAddSampleOpen(true)}
           />
         ) : activeTab === 'mcb-samples' ? (
           <MCBSamplesView

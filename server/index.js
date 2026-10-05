@@ -291,7 +291,7 @@ app.get('/api/batches', async (req, res) => {
       params.push(sTerm, sTerm, sTerm, sTerm);
     }
 
-    sql += ' ORDER BY b.started_at DESC';
+    sql += ' ORDER BY b.started_at DESC, b.rowid DESC';
     const batches = await allQuery(sql, params);
 
     // Summary statistics
