@@ -462,7 +462,7 @@ app.get('/api/standards/iec60898', (req, res) => {
 });
 
 // SPA Catch-all: serve index.html for any non-API routes (client-side routing)
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
