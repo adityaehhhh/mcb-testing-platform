@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: mcb-testing-platform
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DB_TYPE
+        value: sqlite
+      - key: SQLITE_DB_PATH
+        value: ./server/data/mcb_testing.db
+      - key: DEFAULT_MACHINE_ID
+        value: MCB-RIG-001
+      - key: DEFAULT_LOCATION
+        value: Electrical Testing Lab - Station 04
+      - key: HEARTBEAT_INTERVAL_MS
+        value: 3000
+      - key: HEARTBEAT_TIMEOUT_MS
+        value: 6000

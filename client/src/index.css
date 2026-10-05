@@ -1,0 +1,250 @@
+@import "tailwindcss";
+
+@theme {
+  --color-on-tertiary: #ffffff;
+  --color-inverse-primary: #93ccff;
+  --color-surface-container-high: #dee8ff;
+  --color-surface-tint: #006398;
+  --color-inverse-on-surface: #ecf1ff;
+  --color-outline: #707881;
+  --color-primary-container: #007bb9;
+  --color-surface-bright: #f9f9ff;
+  --color-on-tertiary-fixed: #002113;
+  --color-error-container: #ffdad6;
+  --color-on-secondary-container: #5c647a;
+  --color-surface-container-lowest: #ffffff;
+  --color-tertiary: #006947;
+  --color-surface-variant: #d8e3fb;
+  --color-surface-container-highest: #d8e3fb;
+  --color-on-primary-container: #fdfcff;
+  --color-primary: #006194;
+  --color-on-tertiary-fixed-variant: #005236;
+  --color-on-primary: #ffffff;
+  --color-on-secondary: #ffffff;
+  --color-surface: #f9f9ff;
+  --color-surface-dim: #cfdaf2;
+  --color-tertiary-fixed: #6ffbbe;
+  --color-secondary: #565e74;
+  --color-inverse-surface: #263143;
+  --color-on-error: #ffffff;
+  --color-on-background: #111c2d;
+  --color-surface-container: #e7eeff;
+  --color-secondary-fixed: #dae2fd;
+  --color-error: #ba1a1a;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed-dim: #93ccff;
+  --color-tertiary-container: #00855b;
+  --color-outline-variant: #bfc7d2;
+  --color-on-primary-fixed-variant: #004b73;
+  --color-background: #f9f9ff;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-secondary-fixed-dim: #bec6e0;
+  --color-on-secondary-fixed: #131b2e;
+  --color-surface-container-low: #f0f3ff;
+  --color-on-tertiary-container: #f5fff6;
+  --color-secondary-container: #dae2fd;
+  --color-on-secondary-fixed-variant: #3f465c;
+  --color-primary-fixed: #cce5ff;
+  --color-on-primary-fixed: #001d31;
+  --color-on-surface: #111c2d;
+  --color-on-surface-variant: #3f4850;
+
+  --spacing-gutter: 1rem;
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 0.75rem;
+  --spacing-space-lg: 1rem;
+  --spacing-space-xl: 1.5rem;
+  --spacing-space-2xl: 2rem;
+  --spacing-space-3xl: 3rem;
+  --spacing-gutter-desktop: 1.5rem;
+  --spacing-margin: 1rem;
+  --spacing-margin-desktop: 2rem;
+
+  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-jetbrains: 'JetBrains Mono', monospace;
+}
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9ff;
+    color: #111c2d;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  body {
+    overscroll-behavior: none;
+  }
+}
+
+/* Material Symbols Outlined Icon Font */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Stitch Typography Hierarchy Utility Classes */
+.font-label-caps, .text-label-caps {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.font-code-timestamp, .text-code-timestamp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+.font-code-id, .text-code-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+.font-body-sm, .text-body-sm {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.005em;
+  font-weight: 400;
+}
+
+.font-body-md, .text-body-md {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  letter-spacing: 0em;
+  font-weight: 400;
+}
+
+.font-body-lg, .text-body-lg {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  letter-spacing: 0em;
+  font-weight: 400;
+}
+
+.font-title-md, .text-title-md {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.375rem;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+}
+
+.font-headline-sm, .text-headline-sm {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+.font-headline-lg, .text-headline-lg {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+
+.font-metric-md, .text-metric-md {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.font-metric-xl, .text-metric-xl {
+  font-family: 'Inter', sans-serif;
+  font-size: 2.5rem;
+  line-height: 2.75rem;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.font-display-sm, .text-display-sm {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.font-display-lg, .text-display-lg {
+  font-family: 'Inter', sans-serif;
+  font-size: 2.25rem;
+  line-height: 2.75rem;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f3ff;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bfc7d2;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #707881;
+}
+
+/* Form controls default styling */
+select, input[type="text"], input[type="number"] {
+  background-color: #ffffff;
+  color: #111c2d;
+  border: 1px solid #bfc7d2;
+  border-radius: 0.5rem;
+  font-family: inherit;
+}
+
+select:focus, input:focus {
+  border-color: #006194;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 97, 148, 0.15);
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .printable-certificate {
+    display: block !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
