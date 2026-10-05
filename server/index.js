@@ -92,6 +92,9 @@ wss.on('connection', (ws, req) => {
     ws.send(JSON.stringify({
       type: 'INIT_STATUS',
       payload: {
+        serverStatus: 'ONLINE',
+        hardwareConnected: realTransport.isConnected,
+        simulatorActive: simulatedTransport.isConnected,
         isConnected: transport ? transport.isConnected : false,
         machineState: transport ? transport.machineState : 'DISCONNECTED',
         dataSource: transport ? transport.dataSource : 'DISCONNECTED',
@@ -114,7 +117,7 @@ app.get('/api/status', (req, res) => {
 
   // Test permission check
   const blockedReasons = [];
-  if (!isConnected) blockedReasons.push('Machine is disconnected. Connect machine or activate simulator.');
+  if (!isConnected) blockedReasons.push('Machine is disconnected. Connect physical rig or activate Demo Mode.');
   if (telemetry && telemetry.emergencyStop) blockedReasons.push('Emergency stop button is depressed.');
   if (telemetry && (!telemetry.interlocks.door || !telemetry.interlocks.overcurrent || !telemetry.interlocks.overtemperature)) {
     blockedReasons.push('Safety interlocks open / unverified.');
@@ -127,6 +130,9 @@ app.get('/api/status', (req, res) => {
   }
 
   res.json({
+    serverStatus: 'ONLINE',
+    hardwareConnected: realTransport.isConnected,
+    simulatorActive: simulatedTransport.isConnected,
     machineId: 'MCB-RIG-001',
     connected: isConnected,
     mode: currentTransportMode,

@@ -64,21 +64,21 @@ export const LaboratoryOverview: React.FC<LaboratoryOverviewProps> = ({
   const ratedIn = selectedSample?.rated_current_in || 32;
   const targetCurrent = +(ratedIn * targetMultiplier).toFixed(1);
 
-  // Live or fallback display values
+  // Live or fallback display values (strictly '--' when disconnected)
   const voltage = isConnected && telemetry ? telemetry.voltage.toFixed(1) : '--';
   const current = isConnected && telemetry ? telemetry.current.toFixed(1) : '--';
-  const rmsCurrent = isConnected && telemetry ? telemetry.rmsCurrent.toFixed(2) : (lastCompletedTest?.rmsCurrent ? `${lastCompletedTest.rmsCurrent.toFixed(2)}` : '--');
-  const rmsVoltage = isConnected && telemetry ? telemetry.rmsVoltage.toFixed(1) : (lastCompletedTest?.rmsVoltage ? `${lastCompletedTest.rmsVoltage.toFixed(1)}` : '--');
-  const peakCurrent = isConnected && telemetry ? telemetry.peakCurrent.toFixed(2) : (lastCompletedTest?.peakCurrent ? lastCompletedTest.peakCurrent.toFixed(2) : '--');
+  const rmsCurrent = isConnected && telemetry ? telemetry.rmsCurrent.toFixed(2) : '--';
+  const rmsVoltage = isConnected && telemetry ? telemetry.rmsVoltage.toFixed(1) : '--';
+  const peakCurrent = isConnected && telemetry ? telemetry.peakCurrent.toFixed(2) : '--';
   const temperature = isConnected && telemetry ? telemetry.mcbTemp.toFixed(1) : '--';
   const tempRise = isConnected && telemetry ? `+${telemetry.tempRise.toFixed(1)}` : '--';
   const frequency = isConnected && telemetry ? telemetry.frequency.toFixed(2) : '--';
   const activePower = isConnected && telemetry ? (telemetry.power >= 1000 ? `${(telemetry.power / 1000).toFixed(2)} kW` : `${telemetry.power.toFixed(0)} W`) : '--';
-  const iOverIn = isConnected && telemetry ? telemetry.iOverIn.toFixed(2) : (lastCompletedTest?.iOverIn ? `${lastCompletedTest.iOverIn.toFixed(2)}` : '--');
-  const i2t = isConnected && telemetry ? telemetry.i2t.toLocaleString() : (lastCompletedTest?.i2t ? Number(lastCompletedTest.i2t).toLocaleString() : '--');
+  const iOverIn = isConnected && telemetry ? telemetry.iOverIn.toFixed(2) : '--';
+  const i2t = isConnected && telemetry ? telemetry.i2t.toLocaleString() : '--';
   const tripTime = isConnected && telemetry && telemetry.tripTimeMs !== null 
     ? telemetry.tripTimeMs.toFixed(1) 
-    : (lastCompletedTest?.tripTimeMs ? lastCompletedTest.tripTimeMs.toFixed(1) : '--');
+    : '--';
 
   // Control Chain & Hardware States
   const isEStop = telemetry?.emergencyStop;

@@ -70,31 +70,38 @@ export const Header: React.FC<HeaderProps> = ({
           ))}
         </nav>
 
-        {/* Right: Hardware Status, Rig ID, Vital Signs, E-Stop */}
-        <div className="flex items-center gap-space-md flex-shrink-0">
+        {/* Right: Server Status, Hardware Status, Rig ID, Vital Signs, E-Stop */}
+        <div className="flex items-center gap-space-sm sm:gap-space-md flex-shrink-0">
           
-          {/* Connection Status Badge (5 Rapid Clicks activates Hidden Demo Mode) */}
+          {/* Server Connection Status */}
+          <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container-low border border-outline-variant/30 text-[11px] font-label-caps text-on-surface-variant">
+            <span className="w-2 h-2 rounded-full bg-tertiary"></span>
+            <span className="text-outline">SERVER:</span>
+            <span className="text-tertiary font-bold">ONLINE</span>
+          </div>
+
+          {/* Machine Connection Status Badge (5 Rapid Clicks activates Hidden Demo Mode) */}
           <div
             onClick={onStatusClick}
-            title="Click 5x rapidly to activate Operator Simulation Bridge"
-            className={`flex items-center gap-space-xs px-space-md py-1.5 rounded-DEFAULT font-label-caps text-label-caps cursor-pointer select-none transition-all ${
+            title="Click 5x rapidly to activate Operator Demo Mode"
+            className={`flex items-center gap-space-xs px-space-md py-1 rounded font-label-caps text-label-caps cursor-pointer select-none transition-all ${
               isConnected
                 ? 'bg-tertiary-container/10 border border-tertiary-container/30 text-tertiary hover:bg-tertiary-container/20'
                 : 'bg-surface-container-low border border-outline-variant/30 text-outline hover:bg-surface-container'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-tertiary animate-pulse' : 'bg-outline'}`}></span>
-            <span>{isConnected ? 'MACHINE CONNECTED' : 'MACHINE DISCONNECTED'}</span>
+            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-tertiary animate-pulse' : 'bg-outline'}`}></span>
+            <span className="font-semibold">{isConnected ? 'RIG CONNECTED' : 'RIG DISCONNECTED'}</span>
           </div>
 
           {/* Rig ID */}
-          <div className="hidden sm:flex items-center gap-space-xs px-space-md py-1.5 rounded-DEFAULT bg-surface-container-low border border-outline-variant/30 text-on-surface-variant font-code-id text-code-id">
+          <div className="hidden md:flex items-center gap-space-xs px-2.5 py-1 rounded bg-surface-container-low border border-outline-variant/30 text-on-surface-variant font-code-id text-code-id">
             <span className="text-outline font-label-caps text-label-caps">RIG:</span>
             <span>{status.machineId || 'MCB-RIG-001'}</span>
           </div>
 
           {/* Vital signs / Heartbeat */}
-          <div className="hidden md:flex items-center gap-space-xs px-space-md py-1.5 rounded-DEFAULT bg-surface-container-low border border-outline-variant/30 text-on-surface-variant font-code-timestamp text-code-timestamp">
+          <div className="hidden lg:flex items-center gap-space-xs px-2.5 py-1 rounded bg-surface-container-low border border-outline-variant/30 text-on-surface-variant font-code-timestamp text-code-timestamp">
             <span className={`material-symbols-outlined text-[14px] ${isConnected ? 'text-tertiary animate-pulse' : 'text-outline'}`}>vital_signs</span>
             <span>{isConnected ? '2.4s' : '--'}</span>
           </div>

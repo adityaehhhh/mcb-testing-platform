@@ -177,34 +177,61 @@ class SimulatedMachineTransport extends MachineTransport {
 
     // 1. Idle Physics & Micro-fluctuations
     if (!this.activeTest) {
-      // Natural instrumentation drift
-      const vNoise = 0.45 * Math.sin(this.time * 0.8) + 0.25 * Math.cos(this.time * 1.7);
+      // Natural instrumentation drift on RMS
+      const vNoise = 0.35 * Math.sin(this.time * 0.8) + 0.2 * Math.cos(this.time * 1.7);
       this.voltage = +(230.0 + vNoise).toFixed(2);
 
-      const fNoise = 0.04 * Math.sin(this.time * 0.3);
+      const fNoise = 0.03 * Math.sin(this.time * 0.3);
       this.frequency = +(50.0 + fNoise).toFixed(2);
 
-      const iNoise = 0.03 + 0.03 * Math.abs(Math.sin(this.time * 2.1));
-      this.current = +(iNoise).toFixed(2);
+      const iNoise = 0.025 + 0.015 * Math.abs(Math.sin(this.time * 2.1));
+      this.current = +(iNoise).toFixed(3);
 
       // Ambient temperature slow drift
-      const tDrift = 0.3 * Math.sin(this.time * 0.05);
+      const tDrift = 0.2 * Math.sin(this.time * 0.05);
       this.mcbTemp = +(this.ambientTemp + tDrift).toFixed(1);
-      this.loadTemp = +(this.ambientTemp + 0.8 + tDrift).toFixed(1);
+      this.loadTemp = +(this.ambientTemp + 0.6 + tDrift).toFixed(1);
       this.maxTemp = Math.max(this.maxTemp, this.mcbTemp);
     } else {
       // 2. Active Test Simulation Engine
       this.simulateTestProgress(now);
     }
 
-    // Derived Instrumentation Calculations
-    const power = +(this.voltage * this.current).toFixed(1); // Watts
-    const rmsVoltage = +(this.voltage * (0.998 + 0.002 * Math.sin(this.time))).toFixed(1);
-    const rmsCurrent = +(this.current * 0.995).toFixed(2);
-    const peakCurrent = +(this.current * (this.current > 1.0 ? 1.414 * (0.98 + 0.03 * Math.random()) : 1.1)).toFixed(2);
+    // Derived Instrumentation Calculations (True RMS & Peak)
+    const rmsVoltage = this.voltage;
+    const rmsCurrent = this.current;
+    const peakCurrent = +(this.current * (this.current > 1.0 ? Math.SQRT2 * (0.99 + 0.02 * Math.sin(this.time * 5)) : 1.414)).toFixed(2);
+    const power = +(rmsVoltage * rmsCurrent * 0.99).toFixed(1); // Watts
     const ratedIn = this.activeTest ? this.activeTest.sample.rated_current_in : 32.0;
     const iOverIn = +(rmsCurrent / ratedIn).toFixed(2);
     const tempRise = +(this.maxTemp - this.initialTemp).toFixed(1);
+
+    // Generate instantaneous sub-millisecond waveform slice for this tick interval (e.g. 20 points over 30ms = 1.5ms dt)
+    const sliceCount = 15;
+    const dtSliceSec = (this.tickIntervalMs / 1000) / sliceCount;
+    const vInstantaneous = [];
+    const iInstantaneous = [];
+    const omega = 2 * Math.PI * this.frequency;
+
+    for (let k = 0; k < sliceCount; k++) {
+      const tSub = (this.time - (this.tickIntervalMs / 1000)) + k * dtSliceSec;
+      const phaseV = omega * tSub;
+      const phaseI = phaseV - 0.05; // small inductive phase lag
+
+      // V(t) = sqrt(2) * Vrms * sin(2*pi*f*t) + noise
+      const vInst = Math.SQRT2 * rmsVoltage * Math.sin(phaseV) + (Math.random() - 0.5) * 1.5;
+      
+      // I(t) = sqrt(2) * Irms * sin(2*pi*f*t) + harmonics/noise
+      let iInst = 0;
+      if (rmsCurrent > 0.5) {
+        iInst = Math.SQRT2 * rmsCurrent * Math.sin(phaseI) + (Math.random() - 0.5) * (rmsCurrent * 0.02);
+      } else {
+        iInst = Math.SQRT2 * rmsCurrent * Math.sin(phaseI) + (Math.random() - 0.5) * 0.015;
+      }
+
+      vInstantaneous.push(+vInst.toFixed(2));
+      iInstantaneous.push(+iInst.toFixed(2));
+    }
 
     const telemetry = {
       machineId: this.machineId,
@@ -235,7 +262,12 @@ class SimulatedMachineTransport extends MachineTransport {
       machineState: this.machineState,
       currentStage: this.currentStage,
       dataSource: this.dataSource,
-      activeTestId: this.activeTest ? this.activeTest.testId : null
+      activeTestId: this.activeTest ? this.activeTest.testId : null,
+      waveformSlice: {
+        v: vInstantaneous,
+        i: iInstantaneous,
+        dtMs: +(dtSliceSec * 1000).toFixed(2)
+      }
     };
 
     this.emit('telemetry', telemetry);
