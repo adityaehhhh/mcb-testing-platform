@@ -29,7 +29,7 @@ class SimulatedMachineTransport extends MachineTransport {
     this.loadState = 'OFF';
     this.mcbState = 'UNKNOWN';
     this.tripDetected = false;
-    this.emergencyStop = false;
+    this.isEmergencyStopActive = false;
 
     // Safety and Sensors
     this.interlocks = {
@@ -100,7 +100,7 @@ class SimulatedMachineTransport extends MachineTransport {
     // Step 4: Safety Check
     await new Promise((r) => setTimeout(r, 400));
     this.interlocks = { door: true, overcurrent: true, overtemperature: true };
-    this.emergencyStop = false;
+    this.isEmergencyStopActive = false;
     this.machineState = 'SAFETY_CHECK';
     this.emit('state_change', { state: this.machineState, message: 'Safety interlocks locked. Contactor de-energized.' });
 
@@ -229,7 +229,7 @@ class SimulatedMachineTransport extends MachineTransport {
       esp32State: this.esp32State,
       loadState: this.loadState,
       tripDetected: this.tripDetected,
-      emergencyStop: this.emergencyStop,
+      emergencyStop: !!this.isEmergencyStopActive,
       interlocks: this.interlocks,
       sensorHealth: this.sensorHealth,
       machineState: this.machineState,
@@ -251,7 +251,7 @@ class SimulatedMachineTransport extends MachineTransport {
     if (this.activeTest) {
       throw new Error('A test is already in progress.');
     }
-    if (this.emergencyStop) {
+    if (this.isEmergencyStopActive) {
       throw new Error('Emergency Stop active. Clear E-Stop before starting.');
     }
 
@@ -386,7 +386,7 @@ class SimulatedMachineTransport extends MachineTransport {
         this.injectFault('F003', 'TEMPERATURE_SENSOR_FAULT', 'PT100 RTD Sensor', 'WARNING', 'RTD resistance discontinuity.');
       }
       if (t.scenario === 'EMERGENCY_STOP' && t.elapsedMs > 1200) {
-        this.emergencyStop = true;
+        this.isEmergencyStopActive = true;
         this.injectFault('F002', 'EMERGENCY_STOP', 'Safety E-Stop Mushroom', 'CRITICAL', 'Emergency stop button depressed by operator.');
         this.abortTest('Emergency stop activated (F002)');
         return;
@@ -634,7 +634,7 @@ class SimulatedMachineTransport extends MachineTransport {
   }
 
   async emergencyStop() {
-    this.emergencyStop = true;
+    this.isEmergencyStopActive = true;
     this.contactorState = 'OPEN';
     this.relayState = 'OFF';
     this.loadState = 'OFF';
@@ -652,7 +652,7 @@ class SimulatedMachineTransport extends MachineTransport {
   }
 
   async resetFaults() {
-    this.emergencyStop = false;
+    this.isEmergencyStopActive = false;
     this.interlocks = { door: true, overcurrent: true, overtemperature: true };
     this.sensorHealth = {
       current: 'ONLINE',
@@ -719,7 +719,7 @@ class SimulatedMachineTransport extends MachineTransport {
       esp32State: this.esp32State,
       loadState: this.loadState,
       tripDetected: this.tripDetected,
-      emergencyStop: this.emergencyStop,
+      emergencyStop: !!this.isEmergencyStopActive,
       interlocks: this.interlocks,
       sensorHealth: this.sensorHealth,
       machineState: this.machineState,
